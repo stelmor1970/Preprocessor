@@ -100,7 +100,7 @@ def summarize_chunk(client: anthropic.Anthropic, chunk: list[dict], chunk_num: i
         model=MODEL,
         max_tokens=4096,
         thinking={"type": "adaptive"},
-        system=SYSTEM_PROMPT,
+        system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
         messages=[
             {
                 "role": "user",
@@ -121,7 +121,11 @@ system prompt의 출력 양식에 맞춰 각 문제(주제)별로 정리해 주�
             summary_parts.append(text)
             print(".", end="", flush=True)
 
-    print(" 완료")
+    msg = stream.get_final_message()
+    u = msg.usage
+    cache_hit = getattr(u, "cache_read_input_tokens", 0)
+    cache_write = getattr(u, "cache_creation_input_tokens", 0)
+    print(f" 완료 | 입력 {u.input_tokens}tok  캐시생성 {cache_write}tok  캐시적중 {cache_hit}tok  출력 {u.output_tokens}tok")
     return "".join(summary_parts)
 
 
@@ -137,7 +141,7 @@ def create_final_summary(client: anthropic.Anthropic, chunk_summaries: list[str]
         model=MODEL,
         max_tokens=8192,
         thinking={"type": "adaptive"},
-        system=SYSTEM_PROMPT,
+        system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
         messages=[
             {
                 "role": "user",
@@ -160,7 +164,11 @@ def create_final_summary(client: anthropic.Anthropic, chunk_summaries: list[str]
             result_parts.append(text)
             print(".", end="", flush=True)
 
-    print(" 완료")
+    msg = stream.get_final_message()
+    u = msg.usage
+    cache_hit = getattr(u, "cache_read_input_tokens", 0)
+    cache_write = getattr(u, "cache_creation_input_tokens", 0)
+    print(f" 완료 | 입력 {u.input_tokens}tok  캐시생성 {cache_write}tok  캐시적중 {cache_hit}tok  출력 {u.output_tokens}tok")
     return "".join(result_parts)
 
 
