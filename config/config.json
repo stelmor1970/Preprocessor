@@ -1,0 +1,7 @@
+{
+  "model": "claude-opus-4-8",
+  "batch_size": 6,
+  "compression_ratio": { "min": 0.4, "max": 0.6 },
+  "namespace_prefix": "Q",
+  "output": { "json": true, "docx": false }
+}
