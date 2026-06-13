@@ -77,6 +77,7 @@ def main():
     src.add_argument("--text-file", help="이미 전사된 텍스트 파일 경로")
     ap.add_argument("--no-compress", action="store_true", help="압축 생략 (보호/검증만, API 불필요)")
     ap.add_argument("--output-dir", default="output", help="출력 폴더")
+    ap.add_argument("--docx", action="store_true", help="cards.docx(Word) 함께 출력")
     ap.add_argument("--model", default=None, help="압축/OCR 모델 (기본: config.json)")
     ap.add_argument("--batch-size", type=int, default=None, help="압축 배치 크기")
     ap.add_argument("--dpi", type=int, default=120, help="OCR 해상도")
@@ -194,6 +195,11 @@ def main():
     save_json(cards, out / "cards.json")
     save_markdown(cards, out / "cards.md")
     report = save_report(cards, out / "report.json")
+
+    if args.docx or cfg.get("output", {}).get("docx"):
+        from pipeline.docx_out import save_docx
+        save_docx(cards, out / "cards.docx")
+        print(f"Word 문서 출력: {out}/cards.docx")
 
     print("\n" + "=" * 50)
     print(f"총 {report['total']}장 · 채택 {report['adopted']} · 실패 {report['rejected']}")
