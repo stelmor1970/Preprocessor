@@ -29,6 +29,7 @@ from pipeline.protect import Protector
 from pipeline.segment import segment
 from pipeline.cards import Card, save_json, save_markdown, save_report
 from pipeline.abbr import load_abbr, full_phrases, to_memo_view
+from pipeline.tables import build_table
 
 ROOT = Path(__file__).resolve().parent
 CONFIG = ROOT / "config"
@@ -107,17 +108,25 @@ def main():
         sys.exit(1)
     print(f"문제 {len(raw_cards)}개 분해 완료")
 
-    prepared = []  # {"id","norm","masked","mapping","mnemonic"}
+    prepared = []  # {"id","norm","masked","mapping","mnemonic","table"}
+    table_count = 0
     for rc in raw_cards:
         norm = normalize_text(rc["raw"])
         masked, mapping = protector.mask(norm, namespace=rc["id"])
+        # 반복형 기준이면 비교표로 변환 (API 불필요, 결정적 처리)
+        table = build_table(masked, mapping)
+        if table is not None:
+            table_count += 1
         prepared.append({
             "id": rc["id"],
             "norm": norm,
             "masked": masked,
             "mapping": mapping,
             "mnemonic": mnemonic_for(rc["id"], norm, cfg["mnemonics"]),
+            "table": table,
         })
+    if table_count:
+        print(f"반복형 비교표 변환: {table_count}장")
 
     # ── 압축 (선택) ──
     compressed_map: dict[str, str] = {}
@@ -125,7 +134,8 @@ def main():
         import anthropic
         from pipeline.compress import compress_batch
         client = anthropic.Anthropic()
-        items = [{"id": p["id"], "masked": p["masked"]} for p in prepared]
+        # 표로 변환된 카드는 API 압축 대상에서 제외
+        items = [{"id": p["id"], "masked": p["masked"]} for p in prepared if p["table"] is None]
         for i in range(0, len(items), batch_size):
             batch = items[i : i + batch_size]
             ids = ", ".join(b["id"] for b in batch)
@@ -140,6 +150,18 @@ def main():
     # ── 검증 → 채택/복원 → 카드 ──
     cards: list[Card] = []
     for p in prepared:
+        # 1) 반복형 비교표 분기 (API 없이 결정적 변환)
+        if p["table"] is not None:
+            v = verify_compression(p["norm"], p["table"], p["mapping"], ratio_range)
+            adopted = v["passed"]
+            cards.append(Card(
+                id=p["id"], raw=p["norm"],
+                compressed=v["restored"] if adopted else p["norm"],
+                ratio=v["ratio"] if adopted else 0.0,
+                mnemonic=p["mnemonic"], adopted=adopted, verify=v,
+            ))
+            continue
+
         comp_masked = compressed_map.get(p["id"])
         if comp_masked is None:
             # 압축 안 함 또는 실패 → 원문 유지
