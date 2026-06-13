@@ -6,6 +6,13 @@
 
 import sys
 import os
+import io
+
+# Windows 터미널 인코딩 UTF-8 강제 (GUI 실행 시 콘솔창 한국어 깨짐 방지)
+if hasattr(sys.stdout, "buffer") and sys.stdout.encoding and \
+        sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext

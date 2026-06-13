@@ -19,10 +19,16 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import sys
 from pathlib import Path
+
+# Windows 터미널 인코딩을 UTF-8로 강제 (cp949/ASCII 환경에서 한국어 출력 오류 방지)
+if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 from pipeline import normalize_text, restore, verify_compression
 from pipeline.protect import Protector

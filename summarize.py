@@ -6,12 +6,19 @@ Claude Vision 기반 - 스캔 이미지 PDF 전용
 
 import sys
 import os
+import io
 import base64
 import argparse
 from pathlib import Path
 
 import fitz  # PyMuPDF
 import anthropic
+
+# Windows 터미널 인코딩 UTF-8 강제
+if hasattr(sys.stdout, "buffer") and sys.stdout.encoding and \
+        sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 MODEL = "claude-opus-4-8"
 PAGES_PER_CHUNK = 5   # Vision은 이미지당 토큰이 크므로 소규모 청크 권장
