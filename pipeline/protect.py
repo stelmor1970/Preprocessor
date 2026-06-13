@@ -16,11 +16,12 @@ from dataclasses import dataclass
 # ── 우선순위 (숫자가 작을수록 우선; 겹치면 우선순위 높은 쪽을 채택) ──
 P_BRACKET_CJK = 1   # 한자·영문 병기 괄호 — 채점관 확인 항목, 최우선
 P_LAW = 2           # 법령·조문
-P_MEASURE = 3       # 수치 + 단위 + 한정어
-P_BRACKET = 4       # 일반 괄호류
-P_TERM = 5          # 전문용어(terms.json)
-P_MARKER = 6        # 예외·조건 표지어
-P_MNEMONIC = 7      # 두음 암기어 원단어(mnemonics.json)
+P_ABBR = 3          # 약어 풀어쓴 원문 (긴 구절 통째 보존 → 답안용 뷰)
+P_MEASURE = 4       # 수치 + 단위 + 한정어
+P_BRACKET = 5       # 일반 괄호류
+P_TERM = 6          # 전문용어(terms.json)
+P_MARKER = 7        # 예외·조건 표지어
+P_MNEMONIC = 8      # 두음 암기어 원단어(mnemonics.json)
 
 # ── 정규식 ──────────────────────────────────────────────────────
 # 수치: 한글수사(천) 혼용 또는 일반 숫자
@@ -71,10 +72,17 @@ class Span:
 class Protector:
     """보호 대상을 마스킹 토큰으로 치환하고 복원한다."""
 
-    def __init__(self, terms: list[str] | None = None, mnemonics: list[str] | None = None):
+    def __init__(
+        self,
+        terms: list[str] | None = None,
+        mnemonics: list[str] | None = None,
+        abbreviations: list[str] | None = None,
+    ):
         # 긴 항목부터 매칭되도록 정렬 (부분 매칭 방지)
         self.terms = sorted(set(terms or []), key=len, reverse=True)
         self.mnemonics = sorted(set(mnemonics or []), key=len, reverse=True)
+        # 약어 풀어쓴 원문 — 긴 구절을 통째로 보존해야 답안용 뷰가 깨지지 않음
+        self.abbreviations = sorted(set(abbreviations or []), key=len, reverse=True)
 
     # ── 후보 수집 ──
     def _candidates(self, text: str) -> list[Span]:
@@ -91,6 +99,10 @@ class Protector:
                 spans.append(Span(m.start(), m.end(), m.group(), "bracket_cjk", P_BRACKET_CJK))
             else:
                 spans.append(Span(m.start(), m.end(), m.group(), "bracket", P_BRACKET))
+
+        for phrase in self.abbreviations:
+            for m in re.finditer(re.escape(phrase), text):
+                spans.append(Span(m.start(), m.end(), m.group(), "abbr", P_ABBR))
 
         for m in RE_MARKER.finditer(text):
             spans.append(Span(m.start(), m.end(), m.group(), "marker", P_MARKER))

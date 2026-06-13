@@ -17,7 +17,8 @@ from .protect import TOKEN_RE
 class Card:
     id: str
     raw: str                          # 정규화된 원문 (복원 기준)
-    compressed: str = ""              # 검증 통과한 최종 압축본 (토큰 복원 완료)
+    compressed: str = ""              # 답안용 뷰: 압축본 (풀어쓴 원문 유지)
+    memo: str = ""                    # 암기용 뷰: 약어로 축약
     ratio: float = 0.0                # 압축률
     mnemonic: str = ""                # 두음 암기어
     adopted: bool = False             # 검증 통과해 압축본 채택 여부
@@ -51,8 +52,11 @@ def save_markdown(cards: list[Card], path: Path) -> None:
         lines.append(f"## [{c.id}]  {status}  · 압축률 {c.ratio:.1%}")
         if c.mnemonic:
             lines.append(f"**두음 암기어:** {c.mnemonic}")
-        lines.append("\n**압축본**\n")
+        lines.append("\n**📝 답안용 뷰 (시험 작성용 · 풀어쓴 원문)**\n")
         lines.append(c.compressed or "(없음)")
+        if c.memo and c.memo != c.compressed:
+            lines.append("\n**🧠 암기용 뷰 (약어 축약)**\n")
+            lines.append(c.memo)
         # 검증 리포트
         if c.verify.get("checks"):
             lines.append("\n**검증**")

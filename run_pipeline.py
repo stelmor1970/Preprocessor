@@ -28,6 +28,7 @@ from pipeline import normalize_text, restore, verify_compression
 from pipeline.protect import Protector
 from pipeline.segment import segment
 from pipeline.cards import Card, save_json, save_markdown, save_report
+from pipeline.abbr import load_abbr, full_phrases, to_memo_view
 
 ROOT = Path(__file__).resolve().parent
 CONFIG = ROOT / "config"
@@ -40,6 +41,7 @@ def load_config() -> dict:
     cfg["terms"] = terms
     cfg["mnemonics"] = mnem
     cfg["mnemonic_words"] = [w for k, v in mnem.items() if k != "_comment" for w in v]
+    cfg["abbr"] = load_abbr(CONFIG / "abbr.json")
     return cfg
 
 
@@ -94,7 +96,11 @@ def main():
     text = get_text(args)
 
     # ── 분해 → 정규화 → 마스킹 ──
-    protector = Protector(terms=cfg["terms"], mnemonics=cfg["mnemonic_words"])
+    protector = Protector(
+        terms=cfg["terms"],
+        mnemonics=cfg["mnemonic_words"],
+        abbreviations=full_phrases(cfg["abbr"]),
+    )
     raw_cards = segment(text)
     if not raw_cards:
         print("처리할 문제를 찾지 못했습니다.")
@@ -156,6 +162,10 @@ def main():
                     ratio=0.0, mnemonic=p["mnemonic"], adopted=False, verify=v,
                 )
         cards.append(card)
+
+    # ── 약어 양면 뷰: 답안용(compressed) → 암기용(memo) ──
+    for card in cards:
+        card.memo = to_memo_view(card.compressed, cfg["abbr"])
 
     # ── 출력 ──
     out = Path(args.output_dir)
