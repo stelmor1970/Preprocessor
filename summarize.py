@@ -73,15 +73,28 @@ SYSTEM_PROMPT = """당신은 소방시설관리사 2차 실기 시험 전문 강
 
 # ── PDF → 이미지 변환 ──────────────────────────────────────────
 
+MAX_PX = 7000  # Claude API 최대 허용 픽셀 (8000px 제한, 안전 마진 포함)
+
+
 def pdf_to_images_base64(pdf_path: str, dpi: int = DPI) -> list[dict]:
-    """PDF 각 페이지를 base64 PNG로 변환"""
+    """PDF 각 페이지를 base64 PNG로 변환 (Claude API 8000px 제한 자동 처리)"""
     doc = fitz.open(pdf_path)
     pages = []
-    mat = fitz.Matrix(dpi / 72, dpi / 72)   # 72dpi 기준 배율
+    mat = fitz.Matrix(dpi / 72, dpi / 72)
 
     print(f"PDF 로드 완료: {len(doc)}페이지, {dpi}DPI로 변환 중...")
     for i, page in enumerate(doc):
-        pix = page.get_pixmap(matrix=mat, colorspace=fitz.csGRAY)  # 그레이스케일로 용량 절감
+        pix = page.get_pixmap(matrix=mat, colorspace=fitz.csGRAY)
+
+        # 8000px 초과 시 자동 축소
+        if pix.width > MAX_PX or pix.height > MAX_PX:
+            scale = MAX_PX / max(pix.width, pix.height)
+            new_w = int(pix.width * scale)
+            new_h = int(pix.height * scale)
+            pix = pix.resize(new_w, new_h)
+            if i == 0:
+                print(f"  ※ 이미지 크기 초과 → {new_w}×{new_h}px로 자동 축소")
+
         img_bytes = pix.tobytes("png")
         b64 = base64.standard_b64encode(img_bytes).decode()
         pages.append({

@@ -59,7 +59,7 @@ class App(tk.Tk):
 
         r1 = ttk.Frame(f2); r1.pack(fill="x", pady=2)
         ttk.Label(r1, text="이미지 해상도(DPI):").pack(side="left")
-        self.dpi_var = tk.IntVar(value=150)
+        self.dpi_var = tk.IntVar(value=120)
         ttk.Spinbox(r1, from_=100, to=250, increment=10, textvariable=self.dpi_var, width=6).pack(side="left", padx=6)
         ttk.Label(r1, text="(낮을수록 빠름·저렴, 높을수록 정확)").pack(side="left")
 
